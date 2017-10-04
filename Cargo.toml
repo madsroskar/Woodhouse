@@ -1,0 +1,6 @@
+[package]
+name = "woodhouse"
+version = "0.1.0"
+authors = ["Mads Røskar <madshvero@gmail.com>"]
+
+[dependencies]
