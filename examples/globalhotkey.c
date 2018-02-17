@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <Carbon/Carbon.h>
-#include <CoreFoundation/CoreFoundation.h>
+#include <stdlib.h>
+#include "globalhotkey.h"
 
 static OSStatus MyHotKeyHandler(EventHandlerCallRef nextHandler, EventRef theEvent, void *userData)
 {
@@ -13,11 +13,14 @@ int main(void)
 	eventType.eventClass=kEventClassKeyboard;
 	eventType.eventKind=kEventHotKeyPressed;
 
-	OSStatus err = InstallApplicationEventHandler(NewEventHandlerUPP(MyHotKeyHandler),1,&eventType,NULL,NULL);
+	OSStatus err = InstallEventHandler(
+			GetApplicationEventTarget(),
+			(EventHandlerUPP)MyHotKeyHandler,
+			1,&eventType,0,0
+	);
 
 	if(err != noErr){
-		printf("Error: Could not install carbon event hook for input!\n");
-		exit(0);
+		exit(1);
 	}
 
 	EventHotKeyRef gMyHotKeyRef;
@@ -30,7 +33,7 @@ int main(void)
 	EventRef event;
 	EventTargetRef eventTarget = GetEventDispatcherTarget();
 
-	while( ReceiveNextEvent( 0, NULL, kDurationForever, TRUE, &event ) == noErr )
+	while( ReceiveNextEvent( 0, 0, kDurationForever, 1, &event ) == noErr )
 	{
 		SendEventToEventTarget( event, eventTarget );
 		ReleaseEvent( event );
