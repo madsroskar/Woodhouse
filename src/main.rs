@@ -1,56 +1,85 @@
-/*
- *  Copied example from: https://github.com/servo/cocoa-rs/blob/master/examples/hello_world.rs
- */
-extern crate cocoa;
+// Example copied from: https://github.com/Boscop/web-view
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
 
-use cocoa::base::{selector, nil, NO};
-use cocoa::foundation::{NSRect, NSPoint, NSSize, NSAutoreleasePool, NSProcessInfo,
-                        NSString};
-use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular, NSWindow,
-                    NSTitledWindowMask, NSBackingStoreBuffered, NSMenu, NSMenuItem,
-                    NSRunningApplication, NSApplicationActivateIgnoringOtherApps};
+extern crate libc;
+extern crate web_view;
+
+use web_view::*;
+include!("wrapper.rs");
+
+unsafe extern "C" fn callback(
+    _inHandlerCallRef: EventHandlerCallRef,
+    _inEvent: EventRef,
+    _inUserData: *mut ::std::os::raw::c_void
+) -> OSStatus {
+    println!("hotkey");
+    let html_content = "<html><body><h1>Hello, World!</h1></body></html>";
+
+    web_view::builder()
+        .content(Content::Html(html_content))
+        .size(320, 480)
+        .resizable(false)
+        .frameless(true)
+        .debug(true)
+        .user_data(())
+        .invoke_handler(|_webview, _arg| Ok(()))
+        .run()
+        .unwrap();
+
+
+    0
+}
 
 fn main() {
+    let eventType = EventTypeSpec {
+        eventClass: kEventClassKeyboard as u32,
+        eventKind: kEventHotKeyPressed as u32
+    };
+
     unsafe {
-        let _pool = NSAutoreleasePool::new(nil);
+        let err = InstallEventHandler(
+            GetApplicationEventTarget(),
+            Some(callback),
+            1,
+            &eventType,
+            0 as *mut std::os::raw::c_void,
+            0 as *mut *mut OpaqueEventHandlerRef 
+        );
 
-        let app = NSApp();
-        app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+        if err != noErr {
+            panic!("aah error");
+        }
 
-        // create Menu Bar
-        let menubar = NSMenu::new(nil).autorelease();
-        let app_menu_item = NSMenuItem::new(nil).autorelease();
-        menubar.addItem_(app_menu_item);
-        app.setMainMenu_(menubar);
+        let gMyHotKeyRef_box : Box<OpaqueEventHotKeyRef> = Box::new(OpaqueEventHotKeyRef {
+            _unused: []
+        });
+        let gMyHotKeyRef : EventHotKeyRef = Box::into_raw(gMyHotKeyRef_box);
+        let gMyHotKeyID  = EventHotKeyID {
+            signature: 101,
+            id: 1
+        };
 
-        // create Application menu
-        let app_menu = NSMenu::new(nil).autorelease();
-        let quit_prefix = NSString::alloc(nil).init_str("Quit");
-        let quit_title =
-            quit_prefix.stringByAppendingString_(NSProcessInfo::processInfo(nil).processName());
-        let quit_action = selector("terminate:");
-        let quit_key = NSString::alloc(nil).init_str("q");
-        let quit_item = NSMenuItem::alloc(nil)
-            .initWithTitle_action_keyEquivalent_(quit_title, quit_action, quit_key)
-            .autorelease();
-        app_menu.addItem_(quit_item);
-        app_menu_item.setSubmenu_(app_menu);
+        RegisterEventHotKey(49, cmdKey, gMyHotKeyID, GetEventDispatcherTarget(), 0, &gMyHotKeyRef);
 
-        // create Window
-        let window = NSWindow::alloc(nil)
-            .initWithContentRect_styleMask_backing_defer_(NSRect::new(NSPoint::new(0., 0.),
-                                                                      NSSize::new(200., 200.)),
-                                                          NSTitledWindowMask,
-                                                          NSBackingStoreBuffered,
-                                                          NO)
-            .autorelease();
-        window.cascadeTopLeftFromPoint_(NSPoint::new(20., 20.));
-        window.center();
-        let title = NSString::alloc(nil).init_str("Hello World!");
-        window.setTitle_(title);
-        window.makeKeyAndOrderFront_(nil);
-        let current_app = NSRunningApplication::currentApplication(nil);
-        current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
-        app.run();
+        let event_box : Box<OpaqueEventRef>= Box::new(OpaqueEventRef {
+            _unused: [] 
+        });
+        let event : EventRef = Box::into_raw(event_box);
+
+        let eventTarget : EventTargetRef = GetEventDispatcherTarget();
+
+        while ReceiveNextEvent(
+            0,
+            0 as *const EventTypeSpec,
+            kDurationForever as f64,
+            1,
+            &event
+        ) == noErr {
+            SendEventToEventTarget( event, eventTarget );
+            ReleaseEvent( event );
+        }
     }
 }
+
