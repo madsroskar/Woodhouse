@@ -1,0 +1,11 @@
+[package]
+name = "macos-hotkey"
+version = "0.1.0"
+authors = ["Mads Røskar <madshvero@gmail.com>", "Frank Lyder Bredland"]
+
+[dependencies]
+cocoa = "0.20.1"
+libc = "0.2.0"
+
+[build-dependencies]
+bindgen = "0.32.3"

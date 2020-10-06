@@ -1,0 +1,10 @@
+[package]
+name = "woodhouse"
+version = "0.1.0"
+authors = ["Mads Røskar <madshvero@gmail.com>", "Frank Lyder Bredland"]
+
+[dependencies]
+cocoa = "0.20.1"
+libc = "0.2.0"
+web-view = "0.6.2"
+macos-hotkey = { path = "../macos-hotkey", version = "0.1" }
